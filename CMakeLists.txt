@@ -13,6 +13,7 @@ add_executable(SingletonDemo
     src/EagerSingleton.cpp
     src/LazySingleton.cpp
     src/MeyersSingleton.cpp
+    src/SageSingleton.cpp
 )
 
 target_include_directories(SingletonDemo PRIVATE

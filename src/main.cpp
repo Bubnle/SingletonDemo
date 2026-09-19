@@ -1,6 +1,7 @@
 #include "EagerSingleton.h"
 #include "LazySingleton.h"
 #include "MeyersSingleton.h"
+#include "SafeSingleton.h"
 #include <iostream>
 #include <thread>
 #include <vector>
@@ -107,43 +108,20 @@ int testLazySingletonWithoutLock() {
 }
 
 // =========================================================
-// 测试 3：双重检查锁单例（线程安全版本）
+// 测试 3：安全对照单例（线程安全版本）
 // =========================================================
 
-class DCLSingleton {
-public:
-    static DCLSingleton* GetInstance() {
-        if (instance_ == nullptr) {
-            std::lock_guard<std::mutex> lock(mutex_);
-            if (instance_ == nullptr) {
-                instance_ = new DCLSingleton();
-            }
-        }
-        return instance_;
-    }
-
-private:
-    DCLSingleton() = default;
-    ~DCLSingleton() = default;
-
-    static DCLSingleton* instance_;
-    static std::mutex mutex_;
-};
-
-DCLSingleton* DCLSingleton::instance_ = nullptr;
-std::mutex DCLSingleton::mutex_;
-
-int testDCLSingleton() {
+int testSafeSingleton() {
     const int threadCount = 20;
-    std::vector<DCLSingleton*> results(threadCount);
+    std::vector<SafeSingleton*> results(threadCount);
     std::vector<std::thread> threads;
     threads.reserve(threadCount);
 
     // 多线程同时调用 GetInstance()，观察是否所有线程拿到的是同一个对象
-    // 这里使用双重检查锁机制，属于线程安全实现
+    // 这里使用 `SafeSingleton`，它内部使用双重检查锁保证线程安全
     for (int i = 0; i < threadCount; ++i) {
         threads.emplace_back([&results, i]() {
-            results[i] = DCLSingleton::GetInstance();
+            results[i] = SafeSingleton::GetInstance();
         });
     }
 
@@ -160,7 +138,7 @@ int testDCLSingleton() {
     }
 
     std::cout << "\n=========================" << std::endl;
-    std::cout << "测试3 双重检查锁单例（线程安全）" << std::endl;
+    std::cout << "测试3 安全对照单例（线程安全）" << std::endl;
     std::cout << "多线程下是否仍然是同一个实例：" << same << std::endl;
     for (int i = 0; i < threadCount; ++i) {
         std::cout << "线程 " << i << " 地址：" << results[i] << std::endl;
@@ -215,7 +193,7 @@ int main() {
     testEagerSingleton();
     testEagerSingletonThreadSafe();
     testLazySingletonWithoutLock();
-    testDCLSingleton();
+    testSafeSingleton();
     testMeyersSingletonThreadSafe();
 
     return 0;
