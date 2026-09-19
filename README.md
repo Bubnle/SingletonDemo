@@ -1,2 +1,2 @@
-# SingletonDemo-
+# SingletonDemo
 A Singleton Demo
