@@ -5,8 +5,8 @@ using namespace std;
 class LazySingleton {
     
     public:
-        // 获取全局唯一的singlenton函数
-        LazySingleton* GetSingleton();
+        // 获取全局唯一的singleton函数
+        static LazySingleton* GetSingleton();
 
         // 单例模式不支持赋值构造和拷贝构造
         LazySingleton(const LazySingleton& Singleton) = delete;
@@ -21,6 +21,7 @@ class LazySingleton {
 
         // 单例的singleton 
         static LazySingleton* instance;
+        static std::mutex mutex_;
         // 测试的数据
         int mdata ;
     

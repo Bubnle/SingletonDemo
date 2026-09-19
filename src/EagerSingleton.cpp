@@ -7,3 +7,8 @@ using namespace std;
 EagerSingleton* EagerSingleton::instance = new EagerSingleton();
 
 EagerSingleton::EagerSingleton(){}
+EagerSingleton::~EagerSingleton(){}
+
+EagerSingleton* EagerSingleton::GetInstance(){
+    return instance;
+}

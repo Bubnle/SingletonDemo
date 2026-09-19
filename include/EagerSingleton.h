@@ -8,9 +8,7 @@ class EagerSingleton{
         EagerSingleton(const EagerSingleton& eagerSingleton) = delete ;
         EagerSingleton& operator=(const EagerSingleton& eagerSingleton) = delete;
 
-        EagerSingleton* GetInstance();
-
-        
+        static EagerSingleton* GetInstance();
 
     private:
 
@@ -19,4 +17,5 @@ class EagerSingleton{
 
         static EagerSingleton* instance ;
         int mdata = 0;
+
 };
