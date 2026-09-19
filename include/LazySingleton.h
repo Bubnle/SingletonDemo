@@ -21,7 +21,6 @@ class LazySingleton {
 
         // 单例的singleton 
         static LazySingleton* instance;
-        static std::mutex mutex_;
         // 测试的数据
         int mdata ;
     
