@@ -7,6 +7,109 @@
 #include <atomic>
 #include <mutex>
 
+// =========================================================
+// ²âÊÔ 1£º¶öººÊ½µ¥Àı£¨²»¿¼ÂÇÏß³ÌËø£©
+// =========================================================
+
+int testEagerSingleton() {
+    EagerSingleton* a = EagerSingleton::GetInstance();
+    EagerSingleton* b = EagerSingleton::GetInstance();
+
+    std::cout << "\n=========================" << std::endl;
+    std::cout << "²âÊÔ1 ¶öººÊ½µ¥Àı" << std::endl;
+    std::cout << "a == b ? " << (a == b) << std::endl;
+    std::cout << "µØÖ·£º" << a << " | " << b << std::endl;
+    std::cout << "=========================" << std::endl;
+
+    return 0;
+}
+
+// =========================================================
+// ²âÊÔ 1.1£º¶öººÊ½µ¥Àı¶àÏß³Ì²âÊÔ£¨Ïß³Ì°²È«£©
+// =========================================================
+
+int testEagerSingletonThreadSafe() {
+    const int threadCount = 20;
+    std::vector<EagerSingleton*> results(threadCount);
+    std::vector<std::thread> threads;
+    threads.reserve(threadCount);
+
+    // ¶àÏß³ÌÍ¬Ê±µ÷ÓÃ GetInstance()£¬ÕâÀï²»×öÈÎºÎ¶îÍâ¼ÓËø
+    // ÒòÎª¶öººÊ½ÔÚ³ÌĞòÆô¶¯Ê±ÒÑ¾­´´½¨ÁË¶ÔÏó£¬ËùÒÔËü±¾ÉíÊÇÏß³Ì°²È«µÄ
+    for (int i = 0; i < threadCount; ++i) {
+        threads.emplace_back([&results, i]() {
+            results[i] = EagerSingleton::GetInstance();
+        });
+    }
+
+    for (auto& t : threads) {
+        t.join();
+    }
+
+    bool same = true;
+    for (int i = 1; i < threadCount; ++i) {
+        if (results[0] != results[i]) {
+            same = false;
+            break;
+        }
+    }
+
+    std::cout << "\n=========================" << std::endl;
+    std::cout << "²âÊÔ1.1£º¶öººÊ½µ¥Àı¶àÏß³Ì°²È«ĞÔ" << std::endl;
+    std::cout << "¶àÏß³ÌÏÂÊÇ·ñÈÔÈ»ÊÇÍ¬Ò»¸öÊµÀı£º" << same << std::endl;
+    for (int i = 0; i < threadCount; ++i) {
+        std::cout << "Ïß³Ì " << i << " µØÖ·£º" << results[i] << std::endl;
+    }
+    std::cout << "=========================" << std::endl;
+
+    return 0;
+}
+
+// =========================================================
+// ²âÊÔ 2£ºÀÁººÊ½µ¥Àı£¨ÎŞËø°æ±¾£¬Ö±½Ó²âÊÔÊÇ·ñ»á³öÏÖ¶à¸öÊµÀı£©
+// =========================================================
+
+int testLazySingletonWithoutLock() {
+    const int threadCount = 20;
+    std::vector<LazySingleton*> results(threadCount);
+    std::vector<std::thread> threads;
+    threads.reserve(threadCount);
+
+    // ¶àÏß³ÌÍ¬Ê±µ÷ÓÃ GetSingleton()£¬Ã¿¸öÏß³Ì¶¼³¢ÊÔ»ñÈ¡µ¥Àı¶ÔÏó
+    // ÕâÀï²»¼ÓËø£¬ÓÃÀ´¹Û²ìÊÇ·ñ»á²úÉú¶à¸ö²»Í¬µÄÊµÀı
+    for (int i = 0; i < threadCount; ++i) {
+        threads.emplace_back([&results, i]() {
+            results[i] = LazySingleton::GetSingleton();
+        });
+    }
+
+    for (auto& t : threads) {
+        t.join();
+    }
+
+    bool same = true;
+    for (int i = 1; i < threadCount; ++i) {
+        if (results[0] != results[i]) {
+            same = false;
+            break;
+        }
+    }
+
+    std::cout << "\n=========================" << std::endl;
+    std::cout << "²âÊÔ2 ÀÁººÊ½µ¥Àı ÎŞËø " << std::endl;
+    std::cout << "¶àÏß³ÌÏÂÊÇ·ñÈÔÈ»ÊÇÍ¬Ò»¸öÊµÀı£º" << same << std::endl;
+    for (int i = 0; i < threadCount; ++i) {
+        std::cout << "Ïß³Ì " << i << " µØÖ·£º" << results[i] << std::endl;
+    }
+    std::cout << "=========================" << std::endl;
+
+    return 0;
+}
+
+// =========================================================
+// ²âÊÔ 3£ºË«ÖØ¼ì²éËøµ¥Àı£¨Ïß³Ì°²È«°æ±¾£©
+// =========================================================
+
 class DCLSingleton {
 public:
     static DCLSingleton* GetInstance() {
@@ -30,79 +133,90 @@ private:
 DCLSingleton* DCLSingleton::instance_ = nullptr;
 std::mutex DCLSingleton::mutex_;
 
-static bool isSameAddress(const std::vector<LazySingleton*>& values) {
-    for (size_t i = 1; i < values.size(); ++i) {
-        if (values[0] != values[i]) {
-            return false;
+int testDCLSingleton() {
+    const int threadCount = 20;
+    std::vector<DCLSingleton*> results(threadCount);
+    std::vector<std::thread> threads;
+    threads.reserve(threadCount);
+
+    // ¶àÏß³ÌÍ¬Ê±µ÷ÓÃ GetInstance()£¬¹Û²ìÊÇ·ñËùÓĞÏß³ÌÄÃµ½µÄÊÇÍ¬Ò»¸ö¶ÔÏó
+    // ÕâÀïÊ¹ÓÃË«ÖØ¼ì²éËø»úÖÆ£¬ÊôÓÚÏß³Ì°²È«ÊµÏÖ
+    for (int i = 0; i < threadCount; ++i) {
+        threads.emplace_back([&results, i]() {
+            results[i] = DCLSingleton::GetInstance();
+        });
+    }
+
+    for (auto& t : threads) {
+        t.join();
+    }
+
+    bool same = true;
+    for (int i = 1; i < threadCount; ++i) {
+        if (results[0] != results[i]) {
+            same = false;
+            break;
         }
     }
-    return true;
+
+    std::cout << "\n=========================" << std::endl;
+    std::cout << "²âÊÔ3 Ë«ÖØ¼ì²éËøµ¥Àı£¨Ïß³Ì°²È«£©" << std::endl;
+    std::cout << "¶àÏß³ÌÏÂÊÇ·ñÈÔÈ»ÊÇÍ¬Ò»¸öÊµÀı£º" << same << std::endl;
+    for (int i = 0; i < threadCount; ++i) {
+        std::cout << "Ïß³Ì " << i << " µØÖ·£º" << results[i] << std::endl;
+    }
+    std::cout << "=========================" << std::endl;
+
+    return 0;
 }
 
-static bool isSameAddressDCL(const std::vector<DCLSingleton*>& values) {
-    for (size_t i = 1; i < values.size(); ++i) {
-        if (values[0] != values[i]) {
-            return false;
+// =========================================================
+// ²âÊÔ 4£ºMeyers µ¥Àı¶àÏß³Ì²âÊÔ£¨Ïß³Ì°²È«£©
+// =========================================================
+
+int testMeyersSingletonThreadSafe() {
+    const int threadCount = 20;
+    std::vector<MeyersSingleton*> results(threadCount);
+    std::vector<std::thread> threads;
+    threads.reserve(threadCount);
+
+    // ¶àÏß³ÌÍ¬Ê±µ÷ÓÃ GetMayerSinglten()£¬¹Û²ìËùÓĞÏß³ÌÊÇ·ñÄÃµ½Í¬Ò»¸ö¶ÔÏó
+    // Meyers µ¥ÀıÊ¹ÓÃ¾Ö²¿¾²Ì¬±äÁ¿£¬C++11 ºóÔÚ¶àÏß³Ì»·¾³ÏÂÊÇÏß³Ì°²È«µÄ
+    for (int i = 0; i < threadCount; ++i) {
+        threads.emplace_back([&results, i]() {
+            results[i] = &MeyersSingleton::GetMayerSinglten();
+        });
+    }
+
+    for (auto& t : threads) {
+        t.join();
+    }
+
+    bool same = true;
+    for (int i = 1; i < threadCount; ++i) {
+        if (results[0] != results[i]) {
+            same = false;
+            break;
         }
     }
-    return true;
+
+    std::cout << "\n=========================" << std::endl;
+    std::cout << "²âÊÔ4£ºMeyers µ¥Àı¶àÏß³Ì°²È«ĞÔ" << std::endl;
+    std::cout << "¶àÏß³ÌÏÂÊÇ·ñÈÔÈ»ÊÇÍ¬Ò»¸öÊµÀı£º" << same << std::endl;
+    for (int i = 0; i < threadCount; ++i) {
+        std::cout << "Ïß³Ì " << i << " µØÖ·£º" << results[i] << std::endl;
+    }
+    std::cout << "=========================" << std::endl;
+
+    return 0;
 }
 
 int main() {
-    const int threadCount = 20;
-    std::atomic<bool> start{false};
-
-    // 1. é¥¿æ±‰å¼ï¼šç¨‹åºå¯åŠ¨æ—¶åˆ›å»ºå®ä¾‹ï¼Œå¤©ç„¶çº¿ç¨‹å®‰å…¨
-    EagerSingleton* eager1 = EagerSingleton::GetInstance();
-    EagerSingleton* eager2 = EagerSingleton::GetInstance();
-    std::cout << "[EagerSingleton] same instance? " << (eager1 == eager2) << std::endl;
-
-    // 2. æ‡’æ±‰å¼ï¼šåŠ é”åçº¿ç¨‹å®‰å…¨
-    std::vector<LazySingleton*> lazyResults(threadCount);
-    std::vector<std::thread> lazyThreads;
-    lazyThreads.reserve(threadCount);
-
-    for (int i = 0; i < threadCount; ++i) {
-        lazyThreads.emplace_back([&lazyResults, &start, i]() {
-            while (!start.load()) {
-                std::this_thread::yield();
-            }
-            lazyResults[i] = LazySingleton::GetSingleton();
-        });
-    }
-
-    start.store(true);
-    for (auto& t : lazyThreads) {
-        t.join();
-    }
-
-    std::cout << "[LazySingleton] same instance across threads? " << isSameAddress(lazyResults) << std::endl;
-
-    // 3. åŒé‡æ£€æŸ¥é”ï¼šçº¿ç¨‹å®‰å…¨çš„æ‡’æ±‰å¼å®ç°
-    std::vector<DCLSingleton*> dclResults(threadCount);
-    std::vector<std::thread> dclThreads;
-    dclThreads.reserve(threadCount);
-
-    for (int i = 0; i < threadCount; ++i) {
-        dclThreads.emplace_back([&dclResults, &start, i]() {
-            while (!start.load()) {
-                std::this_thread::yield();
-            }
-            dclResults[i] = DCLSingleton::GetInstance();
-        });
-    }
-
-    start.store(true);
-    for (auto& t : dclThreads) {
-        t.join();
-    }
-
-    std::cout << "[DCLSingleton] same instance across threads? " << isSameAddressDCL(dclResults) << std::endl;
-
-    // 4. Meyers å•ä¾‹ï¼šC++11 å±€éƒ¨é™æ€å˜é‡ï¼Œçº¿ç¨‹å®‰å…¨
-    MeyersSingleton& meyers1 = MeyersSingleton::GetMayerSinglten();
-    MeyersSingleton& meyers2 = MeyersSingleton::GetMayerSinglten();
-    std::cout << "[MeyersSingleton] same instance? " << (&meyers1 == &meyers2) << std::endl;
+    testEagerSingleton();
+    testEagerSingletonThreadSafe();
+    testLazySingletonWithoutLock();
+    testDCLSingleton();
+    testMeyersSingletonThreadSafe();
 
     return 0;
 }
